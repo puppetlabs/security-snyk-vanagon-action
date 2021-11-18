@@ -14,6 +14,8 @@ then
         exit 1
     fi
 fi
+# test
+git ls-remote git@github.com:puppetlabs/enterprise_tasks.git
 # setup nginx
 mkdir -p /data/nginx/cache
 mv /nginx_config /etc/nginx/sites-available/default
