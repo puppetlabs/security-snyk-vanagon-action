@@ -92,7 +92,7 @@ func getEnvVar() (*config, error) {
 		if len(branch) > 10 {
 			branch = branch[0:10]
 		}
-		reg, err := regexp.Compile("[^a-zA-Z0-9-_]+")
+		reg, err := regexp.Compile("[^a-zA-Z0-9-]+")
 		if err != nil {
 			log.Fatal(err)
 		}
