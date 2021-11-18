@@ -1,7 +1,7 @@
 containerName = sec-van-action
-# testFolder = /Users/jeremy.mill/Documents/bolt-vanagon/
+testFolder = /Users/jeremy.mill/Documents/bolt-vanagon/
 # testFolder = /Users/jeremy.mill/Documents/puppet-runtime/
-testFolder = /Users/jeremy.mill/Documents/pe-installer-vanagon/
+# testFolder = /Users/jeremy.mill/Documents/pe-installer-vanagon/
 SSHKEY := $(shell cat /Users/jeremy.mill/.ssh/id_ed25519 | base64)
 clean:
 	-rm vanagon_action
@@ -33,6 +33,7 @@ itest:
 		-e INPUT_SSHKEY="$(SSHKEY)" \
 		-e INPUT_SSHKEYNAME=id_ed25519 \
 		-e INPUT_SVDEBUG=true \
+		-e INPUT_BRANCH=main \
 		-v "/Users/jeremy.mill/Documents/security-snyk-vanagon-action/testfiles/repo":"/github/workspace" \
 		-t $(containerName) 
 
@@ -53,6 +54,7 @@ exec:
 		-e INPUT_SSHKEY="$(SSHKEY)" \
 		-e INPUT_SSHKEYNAME=id_ed25519 \
 		-e INPUT_SVDEBUG=true \
+		-e INPUT_BRANCH=main \
 		-v "/Users/jeremy.mill/Documents/security-snyk-vanagon-action/testfiles/repo":"/github/workspace" \
 		-it $(containerName) /bin/bash
 
