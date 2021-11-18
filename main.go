@@ -98,7 +98,6 @@ func getEnvVar() (*config, error) {
 		}
 		branch = reg.ReplaceAllString(branch, "")
 		conf.Branch = branch
-		log.Printf("Configured branch name as: %s", conf.Branch)
 	}
 	// return
 	return &conf, nil
@@ -231,7 +230,6 @@ func snykTest(path, project, platform, org, branch string, noMonitor bool) ([]Vu
 		} else {
 			snykProj = fmt.Sprintf("--project-name=%s_%s_%s", branch, project, platform)
 		}
-		log.Printf("===Debug=== snykProj: %s\n", snykProj)
 		err := exec.Command("snyk", "monitor", snykOrg, snykProj, fileArg).Run()
 		if err != nil {
 			log.Println("error running snyk monitor!", err)
