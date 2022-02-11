@@ -175,7 +175,7 @@ func getGemFromURL(url string) (gem, error) {
 		version = fmt.Sprintf("\"%s\", :platforms => :x64_mingw", version)
 		return gem{Name: name, Version: version}, nil
 	} else if strings.Contains(nameAndVer, "x86-mingw") {
-		i := strings.LastIndex(nameAndVer, "-x64-mingw")
+		i := strings.LastIndex(nameAndVer, "-x86-mingw")
 		nv := nameAndVer[:i]
 		lastTack := strings.LastIndex(nv, "-")
 		name := nv[:lastTack]
