@@ -43,15 +43,15 @@ func getEnvVar() (*config, error) {
 	conf.NoMonitor = nomon != ""
 	// skip projects and platforms are not, don't fail on it
 	// platforms
-	skipp := os.Getenv("INPUT_SKIPPROJECTS")
+	skipp := os.Getenv("INPUT_SKIPPLATFORMS")
 	if skipp != "" {
 		splitstring := strings.Split(skipp, ",")
 		for i := range splitstring {
 			splitstring[i] = strings.TrimSpace(splitstring[i])
 		}
-		conf.SkipProjects = splitstring
+		conf.SkipPlatforms = splitstring
 	} else {
-		conf.SkipProjects = []string{}
+		conf.SkipPlatforms = []string{}
 	}
 	//projects
 	skipr := os.Getenv("INPUT_SKIPPROJECTS")
