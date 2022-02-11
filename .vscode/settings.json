@@ -1,1 +1,7 @@
-{}
+{
+    "cSpell.enableFiletypes": [
+        "!go",
+        "!json",
+        "!yaml"
+    ]
+}
