@@ -2,6 +2,7 @@ containerName = sec-van-action
 # testFolder = /Users/jeremy.mill/Documents/bolt-vanagon/
 # testFolder = /Users/jeremy.mill/Documents/puppet-runtime/
 testFolder = /Users/jeremy.mill/Documents/pe-installer-vanagon/
+# testFolder = /Users/jeremy.mill/Documents/pxp-agent-vanagon/
 SSHKEY := $(shell cat /Users/jeremy.mill/.ssh/id_ed25519 | base64)
 clean:
 	-rm vanagon_action
