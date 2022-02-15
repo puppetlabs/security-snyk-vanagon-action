@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -74,6 +75,33 @@ func runVanagonDeps(projects, platforms []string, debug bool) []depsOut {
 	return ppGems
 }
 
+func parseVanagonOutput(input, project, platform string) ([]gem, error) {
+	components := gjson.Get(input, "components").Map()
+	gems := make([]gem, 0)
+	for name, component := range components {
+		version := gjson.Get(component.Raw, "version").String()
+		url := gjson.Get(component.Raw, "url").String()
+		// skip non gems
+		if !strings.HasSuffix(url, ".gem") {
+			continue
+		}
+		// check for blanks
+		if version == "" || url == "" {
+			log.Printf("blank version or url in component: %s on: %s %s", name, project, platform)
+			continue
+		}
+		if strings.HasPrefix(url, "https://rubygems.org") || strings.HasPrefix(url, "http://rubygems.org") {
+			gem, err := getGemFromURL(url)
+			if err != nil {
+				log.Println("error getting gem from url", err)
+				continue
+			}
+			gems = append(gems, gem)
+		}
+	}
+	return gems, nil
+}
+
 func getVanagonGems(project, platform string, result chan depsOut, sem chan int, debug bool) {
 	do := depsOut{
 		Platform: platform,
@@ -117,34 +145,17 @@ func getVanagonGems(project, platform string, result chan depsOut, sem chan int,
 		return
 	}
 	trimString := string(output)[findex : lindex+1]
-	components := gjson.Get(trimString, "components").Map()
-	gems := make([]gem, 0)
-	for name, component := range components {
-		version := gjson.Get(component.Raw, "version").String()
-		url := gjson.Get(component.Raw, "url").String()
-		// skip non gems
-		if !strings.HasSuffix(url, ".gem") {
-			continue
-		}
-		// check for blanks
-		if version == "" || url == "" {
-			log.Printf("blank version or url in component: %s on: %s %s", name, project, platform)
-			continue
-		}
-		if strings.HasPrefix(url, "https://rubygems.org") || strings.HasPrefix(url, "http://rubygems.org") {
-			gem, err := getGemFromURL(url)
-			if err != nil {
-				log.Println("error getting gem from url", err)
-				continue
-			}
-			gems = append(gems, gem)
-		}
+	gems, err := parseVanagonOutput(trimString, project, platform)
+	if err != nil {
+		log.Printf("Error parsing vanagon Output: %s", err)
 	}
 	do.Gems = &gems
 	result <- do
 
 }
 
+// getGemFromURL returns a name and a version string. The version is quoted already
+// to handle different platform specs
 func getGemFromURL(url string) (gem, error) {
 	// trim the URL to the final part of the path and replace .gem with ""
 	splitString := strings.Split(url, "/")
@@ -152,8 +163,30 @@ func getGemFromURL(url string) (gem, error) {
 	nameAndVer = strings.Replace(nameAndVer, ".gem", "", -1)
 	// find the last index of "-" and split on it, rhs is the verion, lhs
 	// is the gem name
-	lastIndex := strings.LastIndex(nameAndVer, "-")
-	name := nameAndVer[:lastIndex]
-	version := nameAndVer[lastIndex+1:]
-	return gem{Name: name, Version: version}, nil
+
+	//"https://rubygems.org/downloads/minitar-0.9.gem"
+	//"https://rubygems.org/downloads/ffi-1.15.3-x64-mingw32.gem"
+	if strings.Contains(nameAndVer, "x64-mingw") {
+		i := strings.LastIndex(nameAndVer, "-x64-mingw")
+		nv := nameAndVer[:i]
+		lastTack := strings.LastIndex(nv, "-")
+		name := nv[:lastTack]
+		version := nv[lastTack+1:]
+		version = fmt.Sprintf("\"%s\", :platforms => :x64_mingw", version)
+		return gem{Name: name, Version: version}, nil
+	} else if strings.Contains(nameAndVer, "x86-mingw") {
+		i := strings.LastIndex(nameAndVer, "-x86-mingw")
+		nv := nameAndVer[:i]
+		lastTack := strings.LastIndex(nv, "-")
+		name := nv[:lastTack]
+		version := nv[lastTack+1:]
+		version = fmt.Sprintf("\"%s\", :platforms => :mingw", version)
+		return gem{Name: name, Version: version}, nil
+	} else {
+		lastIndex := strings.LastIndex(nameAndVer, "-")
+		name := nameAndVer[:lastIndex]
+		version := nameAndVer[lastIndex+1:]
+		version = fmt.Sprintf("\"%s\"", version)
+		return gem{Name: name, Version: version}, nil
+	}
 }

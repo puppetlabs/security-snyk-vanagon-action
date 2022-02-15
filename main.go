@@ -43,15 +43,15 @@ func getEnvVar() (*config, error) {
 	conf.NoMonitor = nomon != ""
 	// skip projects and platforms are not, don't fail on it
 	// platforms
-	skipp := os.Getenv("INPUT_SKIPPROJECTS")
+	skipp := os.Getenv("INPUT_SKIPPLATFORMS")
 	if skipp != "" {
 		splitstring := strings.Split(skipp, ",")
 		for i := range splitstring {
 			splitstring[i] = strings.TrimSpace(splitstring[i])
 		}
-		conf.SkipProjects = splitstring
+		conf.SkipPlatforms = splitstring
 	} else {
-		conf.SkipProjects = []string{}
+		conf.SkipPlatforms = []string{}
 	}
 	//projects
 	skipr := os.Getenv("INPUT_SKIPPROJECTS")
@@ -125,7 +125,7 @@ func buildGemFile(project, platform string, gems *[]gem) (string, error) {
 	// build the gemfile
 	gemfile := "source ENV['GEM_SOURCE'] || \"https://rubygems.org\"\n"
 	for _, gem := range *gems {
-		gemfile += fmt.Sprintf("gem \"%s\", \"%s\"\n", gem.Name, gem.Version)
+		gemfile += fmt.Sprintf("gem \"%s\", %s\n", gem.Name, gem.Version)
 	}
 	// make sure the output dir exists (creating if it doesn't) then write to a lockfile
 	DIR_MUTEX.Lock()
