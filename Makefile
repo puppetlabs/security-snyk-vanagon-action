@@ -1,8 +1,10 @@
 containerName = sec-van-action
 # testFolder = /Users/jeremy.mill/Documents/bolt-vanagon/
 # testFolder = /Users/jeremy.mill/Documents/puppet-runtime/
-testFolder = /Users/jeremy.mill/Documents/pe-installer-vanagon/
+# testFolder = /Users/jeremy.mill/Documents/pe-installer-vanagon/
 # testFolder = /Users/jeremy.mill/Documents/pxp-agent-vanagon/
+testFolder = /Users/jeremy.mill/Documents/pe-opsworks-tools-vanagon/
+
 SSHKEY := $(shell cat /Users/jeremy.mill/.ssh/id_ed25519 | base64)
 clean:
 	-rm vanagon_action
@@ -21,7 +23,7 @@ itest:
 	make clean
 	make build
 	make copy_testfiles
-	docker run --name $(containerName) \
+	docker run -i --name $(containerName) \
 		-e INPUT_SNYKORG=sectest \
 		-e INPUT_SNYKTOKEN=$(SNYK_TOKEN) \
 		-e GITHUB_WORKSPACE=/github/workspace \
@@ -61,3 +63,8 @@ exec:
 
 test:
 	echo $(SSHKEY)
+
+start_cache:
+	-docker rm cache_proxy
+	docker build -t cache_proxy -f ./dev_tools/Dockerfile .
+	docker run -it --rm --name cache_proxy -e INPUT_RPROXYUSER=artifactory -e INPUT_RPROXYKEY="$(RPROXY_KEY)" -p8080:80 cache_proxy
