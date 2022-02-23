@@ -190,19 +190,24 @@ func processProjPlat(deps depsOut, org string, results chan processOut) {
 			path:     path,
 		}
 	} else {
-		log.Printf("no gems on %s %s", deps.Project, deps.Platform)
+		log.Printf("no gems on %s %s. Creating blank Gemfile", deps.Project, deps.Platform)
+		path, err := buildGemFile(deps.Project, deps.Platform, deps.Gems)
+		if err != nil {
+			log.Printf("error writing gemfile on: %s %s. Error: %s", deps.Project, deps.Platform, err)
+			results <- processOut{}
+			return
+		}
+		results <- processOut{
+			hasGems:  false,
+			project:  deps.Project,
+			platform: deps.Platform,
+			path:     path,
+		}
 	}
-	results <- processOut{hasGems: false}
 }
 
 func runSnyk(p processOut, org, branch string, sem chan int, results chan []VulnReport, noMonitor bool) {
 	log.Printf("running snyk on %s %s", p.project, p.platform)
-	if !p.hasGems {
-		<-sem
-		results <- []VulnReport{}
-		return
-	}
-	// TODO: change true -> false by default
 	vulns, err := snykTest(p.path, p.project, p.platform, org, branch, noMonitor)
 	//<-sem
 	if err != nil {
@@ -230,6 +235,7 @@ func snykTest(path, project, platform, org, branch string, noMonitor bool) ([]Vu
 		} else {
 			snykProj = fmt.Sprintf("--project-name=%s_%s_%s", branch, project, platform)
 		}
+		log.Printf("running: snyk monitor %s %s %s", snykOrg, snykProj, fileArg)
 		err := exec.Command("snyk", "monitor", snykOrg, snykProj, fileArg).Run()
 		if err != nil {
 			log.Println("error running snyk monitor!", err)
@@ -285,7 +291,7 @@ func replaceUrls(path, newHost string, umap map[string]string) error {
 				sstring := fmt.Sprintf("https://%s", url)
 				// format the new host, then format according to the specifier
 				newUrl := ""
-				if newHost == "localhost" {
+				if newHost == "localhost" || newHost == "localhost:8080" {
 					newUrl = fmt.Sprintf("http://%s", newHost)
 				} else {
 					newUrl = fmt.Sprintf("https://%s", newHost)
@@ -311,7 +317,7 @@ func replaceUrls(path, newHost string, umap map[string]string) error {
 }
 
 func setDebugEnvVars() {
-	testrepo := "/Users/jeremy.mill/Documents/bolt-vanagon/"
+	testrepo := "/Users/jeremy.mill/Documents/pxp-agent-vanagon/"
 	//testrepo := "/Users/jeremy.mill/Documents/puppet-runtime/"
 	out, err := exec.Command("rm", "-rf", "./testfiles/repo").Output()
 	if err != nil {
@@ -327,18 +333,24 @@ func setDebugEnvVars() {
 		log.Fatal("**DEBUG** failed to copy dir", err)
 	}
 	_ = out
+	// MAX_V_DEPS = 1
+	os.Setenv("INPUT_SNYKORG", "sectest")
 	os.Setenv("INPUT_SNYKTOKEN", os.Getenv("SNYK_TOKEN"))
+	os.Setenv("GITHUB_WORKSPACE", "./testfiles/repo")
 	os.Setenv("INPUT_RPROXYKEY", os.Getenv("RPROXY_KEY"))
+	os.Setenv("INPUT_URLSTOREPLACE", "artifactory.delivery.puppetlabs.net,%s/xart,builds.delivery.puppetlabs.net,%s/xbuild")
+	os.Setenv("INPUT_NEWHOST", "localhost:8080")
 	//os.Setenv("INPUT_RPROXYKEY", "test")
 	os.Setenv("INPUT_SVDEBUG", "true")
-	os.Setenv("INPUT_SNYKORG", "sectest")
 	os.Setenv("INPUT_SKIPPROJECTS", "agent-runtime-5.5.x,agent-runtime-1.10.x,client-tools-runtime-irving,pdk-runtime")
 	os.Setenv("INPUT_SKIPPLATFORMS", "cisco-wrlinux-5-x86_64,cisco-wrlinux-7-x86_64,debian-10-armhf,eos-4-i386,fedora-30-x86_64,fedora-31-x86_64,osx-10.14-x86_64")
-	os.Setenv("GITHUB_WORKSPACE", "./testfiles/repo")
+
 }
 
 func main() {
-	//setDebugEnvVars()
+	if os.Getenv("LOCAL_RUN") != "" {
+		setDebugEnvVars()
+	}
 	conf, err := getEnvVar()
 	if err != nil {
 		log.Fatal("couldn't setup the env vars", err)
@@ -380,9 +392,7 @@ func main() {
 	p := []processOut{}
 	for i := 0; i < toProcess; i++ {
 		po := <-results
-		if po.hasGems {
-			p = append(p, po)
-		}
+		p = append(p, po)
 	}
 	// foreach processOut run snyk
 	sem := make(chan int, MAX_V_DEPS)
@@ -393,6 +403,9 @@ func main() {
 	for _, po := range p {
 		toProcess = toProcess + 1
 		sem <- 1
+		if conf.Debug {
+			log.Printf("calling runSnyk on: %s %s", po.project, po.platform)
+		}
 		go runSnyk(po, conf.SnykOrg, conf.Branch, sem, sresults, conf.NoMonitor)
 	}
 	for i := 0; i < toProcess; i++ {
