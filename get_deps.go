@@ -140,7 +140,7 @@ func getVanagonGems(project, platform string, result chan depsOut, sem chan int,
 	if output == nil {
 		log.Printf("Total failure to run vanagon on %s %s", project, platform)
 		gems := make([]gem, 0)
-		do := depsOut{Gems: &gems}
+		do.Gems = &gems
 		result <- do
 		return
 	}

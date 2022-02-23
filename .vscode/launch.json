@@ -5,12 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
-            "type": "python",
+            "name": "Launch Package",
+            "type": "go",
             "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "justMyCode": false
+            "mode": "auto",
+            "program": "${fileDirname}",
+            "env": {
+                "LOCAL_RUN": "true"
+            }
         }
     ]
 }
