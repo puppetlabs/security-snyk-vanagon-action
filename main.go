@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -67,6 +68,19 @@ func getEnvVar() (*config, error) {
 	// add a debug flag
 	debug := os.Getenv("INPUT_SVDEBUG")
 	conf.Debug = debug != ""
+
+	branch := os.Getenv("INPUT_BRANCH")
+	if branch != "" {
+		if len(branch) > 10 {
+			branch = branch[0:10]
+		}
+		reg, err := regexp.Compile("[^a-zA-Z0-9-]+")
+		if err != nil {
+			log.Fatal(err)
+		}
+		branch = reg.ReplaceAllString(branch, "")
+		conf.Branch = branch
+	}
 	// return
 	return &conf, nil
 }
@@ -260,10 +274,6 @@ func setDebugEnvVars() {
 	os.Setenv("INPUT_SNYKORG", "sectest")
 	os.Setenv("INPUT_SNYKTOKEN", os.Getenv("SNYK_TOKEN"))
 	os.Setenv("GITHUB_WORKSPACE", "./testfiles/repo")
-	os.Setenv("INPUT_RPROXYKEY", os.Getenv("RPROXY_KEY"))
-	os.Setenv("INPUT_URLSTOREPLACE", "artifactory.delivery.puppetlabs.net,%s/xart,builds.delivery.puppetlabs.net,%s/xbuild")
-	os.Setenv("INPUT_NEWHOST", "localhost:8080")
-	//os.Setenv("INPUT_RPROXYKEY", "test")
 	os.Setenv("INPUT_SVDEBUG", "true")
 	os.Setenv("INPUT_SKIPPROJECTS", "agent-runtime-5.5.x,agent-runtime-1.10.x,client-tools-runtime-irving,pdk-runtime")
 	os.Setenv("INPUT_SKIPPLATFORMS", "cisco-wrlinux-5-x86_64,cisco-wrlinux-7-x86_64,debian-10-armhf,eos-4-i386,fedora-30-x86_64,fedora-31-x86_64,osx-10.14-x86_64")
@@ -290,8 +300,6 @@ func main() {
 	}
 	// get the projects and platforms
 	projects, platforms := getProjPlats(conf)
-	// replace the urls
-
 	// get all the vanagon dependencies
 	log.Println("running vanagon deps")
 	vDeps := runVanagonDeps(projects, platforms, conf.Debug)
