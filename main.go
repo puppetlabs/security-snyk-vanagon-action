@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 
@@ -64,41 +63,10 @@ func getEnvVar() (*config, error) {
 	} else {
 		conf.SkipProjects = []string{}
 	}
-	// get the urls to replace if any
-	urls := os.Getenv("INPUT_URLSTOREPLACE")
-	if urls != "" {
-		urlInput := strings.Split(urls, ",")
-		for i := range urlInput {
-			urlInput[i] = strings.TrimSpace(urlInput[i])
-		}
-		conf.UrlsToReplace = make(map[string]string)
-		for i := 0; i < len(urlInput); i += 2 {
-			conf.UrlsToReplace[urlInput[i]] = urlInput[i+1]
-		}
-	}
-	// get the proxy host
-	newhost := os.Getenv("INPUT_NEWHOST")
-	if newhost != "" {
-		conf.ProxyHost = newhost
-	} else {
-		conf.ProxyHost = ""
-	}
+
 	// add a debug flag
 	debug := os.Getenv("INPUT_SVDEBUG")
 	conf.Debug = debug != ""
-	// get the branch
-	branch := os.Getenv("INPUT_BRANCH")
-	if branch != "" {
-		if len(branch) > 10 {
-			branch = branch[0:10]
-		}
-		reg, err := regexp.Compile("[^a-zA-Z0-9-]+")
-		if err != nil {
-			log.Fatal(err)
-		}
-		branch = reg.ReplaceAllString(branch, "")
-		conf.Branch = branch
-	}
 	// return
 	return &conf, nil
 }
@@ -271,51 +239,6 @@ func snykTest(path, project, platform, org, branch string, noMonitor bool) ([]Vu
 	return oVulns, nil
 }
 
-func replaceUrls(path, newHost string, umap map[string]string) error {
-	for url, nfmt := range umap {
-		err := filepath.Walk(path, func(spath string, info os.FileInfo, err error) error {
-			if info == nil {
-				log.Fatal("Fatal: os.FileInfo is nil!")
-			}
-			// if it's a file
-			if !info.IsDir() {
-				// read the file to a string
-				dat, err := os.ReadFile(spath)
-				if err != nil {
-					log.Printf("Error reading %s", spath)
-					return nil
-				}
-				fstring := string(dat)
-				// find and replace each URL (http and https replacement)
-				hstring := fmt.Sprintf("http://%s", url)
-				sstring := fmt.Sprintf("https://%s", url)
-				// format the new host, then format according to the specifier
-				newUrl := ""
-				if newHost == "localhost" || newHost == "localhost:8080" {
-					newUrl = fmt.Sprintf("http://%s", newHost)
-				} else {
-					newUrl = fmt.Sprintf("https://%s", newHost)
-				}
-				newUrl = fmt.Sprintf(nfmt, newUrl)
-				fstring = strings.Replace(fstring, hstring, newUrl, 1)
-				fstring = strings.Replace(fstring, sstring, newUrl, 1)
-				fstring = strings.Replace(fstring, "git://", "https://", -1)
-				// rewrite the file
-				err = os.WriteFile(spath, []byte(fstring), 0644)
-				if err != nil {
-					log.Printf("Error writing replacement %s", spath)
-					return nil
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func setDebugEnvVars() {
 	testrepo := "/Users/jeremy.mill/Documents/pxp-agent-vanagon/"
 	//testrepo := "/Users/jeremy.mill/Documents/puppet-runtime/"
@@ -368,13 +291,7 @@ func main() {
 	// get the projects and platforms
 	projects, platforms := getProjPlats(conf)
 	// replace the urls
-	log.Println("replacing URLs")
-	if len(conf.UrlsToReplace) > 0 {
-		err = replaceUrls("./configs", conf.ProxyHost, conf.UrlsToReplace)
-		if err != nil {
-			log.Panic("error replacing URLs", err)
-		}
-	}
+
 	// get all the vanagon dependencies
 	log.Println("running vanagon deps")
 	vDeps := runVanagonDeps(projects, platforms, conf.Debug)
