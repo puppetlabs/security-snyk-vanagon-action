@@ -2,10 +2,13 @@ FROM ubuntu:focal
 RUN apt update
 RUN apt upgrade -y
 # install dependencies
-RUN apt install -y ruby ruby-bundler ruby-dev git
+RUN apt install -y ruby ruby-bundler git
 RUN gem install fustigit
 RUN gem install git
+RUN gem install rchardet
 RUN gem install docopt
+RUN gem install lock_manager
+RUN gem install packaging
 RUN gem install vanagon
 # move over the executables
 ADD https://github.com/olatt/snyk-vanagon-action/releases/download/v3/security-snyk-vanagon-action /usr/local/bin/vanagon_action
