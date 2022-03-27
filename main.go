@@ -254,7 +254,7 @@ func snykTest(path, project, platform, org, branch string, noMonitor bool) ([]Vu
 }
 
 func setDebugEnvVars() {
-	testrepo := "/Users/jeremy.mill/Documents/pxp-agent-vanagon/"
+	testrepo := "/Users/oak.latt/dev/puppet-runtime/"
 	//testrepo := "/Users/jeremy.mill/Documents/puppet-runtime/"
 	out, err := exec.Command("rm", "-rf", "./testfiles/repo").Output()
 	if err != nil {
