@@ -11,7 +11,7 @@ RUN gem install lock_manager
 RUN gem install packaging
 RUN gem install vanagon
 # move over the executables
-ADD https://github.com/puppetlabs/security-snyk-vanagon-action/releases/download/v3/vanagon_action /usr/local/bin/vanagon_action
+ADD https://github.com/puppetlabs/security-snyk-vanagon-action/releases/latest/download/vanagon_action /usr/local/bin/vanagon_action
 # ADD vanagon_action /usr/local/bin/vanagon_action
 RUN chmod +x /usr/local/bin/vanagon_action
 # install snyk
