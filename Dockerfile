@@ -6,9 +6,11 @@ RUN apt install -y ruby ruby-bundler ruby-dev git build-essential
 RUN gem install fustigit
 RUN gem install git
 RUN gem install docopt
-RUN git clone https://github.com/puppetlabs/vanagon.git && cd vanagon && bundle install && gem build -o vanagon.gem vanagon.gemspec && gem install --local ./vanagon.gem
+RUN gem install lock_manager
+RUN gem install packaging
+RUN gem install vanagon
 # move over the executables
-ADD https://github.com/puppetlabs/security-snyk-vanagon-action/releases/latest/download/vanagon_action /usr/local/bin/vanagon_action
+ADD https://github.com/puppetlabs/security-snyk-vanagon-action/releases/download/v2.4.0/vanagon_action /usr/local/bin/vanagon_action
 # ADD vanagon_action /usr/local/bin/vanagon_action
 RUN chmod +x /usr/local/bin/vanagon_action
 # install snyk
