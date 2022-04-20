@@ -208,17 +208,20 @@ func snykTest(path, project, platform, org, branch string, noMonitor bool) ([]Vu
 	cwd, _ := os.Getwd()
 	fileArg := fmt.Sprintf("--file=%s/%s", cwd, gPath)
 	log.Println("testing ", project, platform)
+	getRepo := os.Getenv("GITHUB_REPOSITORY")
+	snykRepo := fmt.Sprintf("--remote-repo-url=https://github.com/%s.git", getRepo)
 	// run snyk monitor
 	if !noMonitor {
 		snykOrg := fmt.Sprintf("--org=%s", org)
-		var snykProj string
+		snykProj := fmt.Sprintf("--project-name=%s", platform)
+		var snykTref string
 		if branch == "" {
-			snykProj = fmt.Sprintf("--project-name=%s_%s", project, platform)
+			snykTref = fmt.Sprintf("--target-reference=%s", project)
 		} else {
-			snykProj = fmt.Sprintf("--project-name=%s_%s_%s", branch, project, platform)
+			snykTref = fmt.Sprintf("--target-reference=%s_%s", branch, project)
 		}
-		log.Printf("running: snyk monitor %s %s %s", snykOrg, snykProj, fileArg)
-		err := exec.Command("snyk", "monitor", snykOrg, snykProj, fileArg).Run()
+		log.Printf("running: snyk monitor %s %s %s %s %s", snykTref, snykRepo, snykOrg, snykProj, fileArg)
+		err := exec.Command("snyk", "monitor", snykTref, snykRepo, snykOrg, snykProj, fileArg).Run()
 		if err != nil {
 			log.Println("error running snyk monitor!", err)
 			return nil, err
@@ -271,7 +274,7 @@ func setDebugEnvVars() {
 	}
 	_ = out
 	// MAX_V_DEPS = 1
-	os.Setenv("INPUT_SNYKORG", "sectest")
+	os.Setenv("INPUT_SNYKORG", "snyk-code-test-n8h")
 	os.Setenv("INPUT_SNYKTOKEN", os.Getenv("SNYK_TOKEN"))
 	os.Setenv("GITHUB_WORKSPACE", "./testfiles/repo")
 	os.Setenv("INPUT_SVDEBUG", "true")

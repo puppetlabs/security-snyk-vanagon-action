@@ -1,7 +1,7 @@
-LOCAL_DIR = "/Users/oak.latt/dev"
+LOCAL_DIR = /Users/oak.latt/dev
 
 containerName = sec-van-action
-testFolder = $(LOCAL_DIR)/bolt-vanagon/
+testFolder = $(LOCAL_DIR)/pe-bolt-vanagon/
 # testFolder = $(LOCAL_DIR)/puppet-runtime/
 # testFolder = $(LOCAL_DIR)/pe-installer-vanagon/
 # testFolder = $(LOCAL_DIR)/pxp-agent-vanagon/
@@ -24,13 +24,14 @@ itest:
 	make build
 	make copy_testfiles
 	docker run --platform linux/amd64 -i --name $(containerName) \
-		-e INPUT_SNYKORG=sectest \
+		-e INPUT_SNYKORG=snyk-code-test-n8h \
 		-e INPUT_SNYKTOKEN=$(SNYK_TOKEN) \
 		-e GITHUB_WORKSPACE=/github/workspace \
+		-e GITHUB_REPOSITORY=olatt/snyk-test \
 		-e INPUT_SSHKEY="$(SSHKEY)" \
 		-e INPUT_SSHKEYNAME=id_ed25519 \
 		-e INPUT_SVDEBUG=true \
-		-e INPUT_BRANCH=main-test \
+		-e INPUT_BRANCH=test \
 		-v "$(LOCAL_DIR)/security-snyk-vanagon-action/testfiles/repo":"/github/workspace" \
 		-t $(containerName) 
 
