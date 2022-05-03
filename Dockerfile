@@ -2,7 +2,7 @@ FROM ubuntu:focal
 RUN apt update
 RUN apt upgrade -y
 # install dependencies
-RUN apt install -y ruby ruby-bundler git
+RUN apt install -y ruby ruby-bundler ruby-dev git
 RUN gem install vanagon
 # move over the executables
 ADD https://github.com/puppetlabs/security-snyk-vanagon-action/releases/latest/download/vanagon_action /usr/local/bin/vanagon_action
