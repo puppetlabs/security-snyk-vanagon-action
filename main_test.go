@@ -74,22 +74,6 @@ func TestGetEnvVar(t *testing.T) {
 			t.Errorf("SkipProjects did not have val: %s", v)
 		}
 	}
-	expected_urls := map[string]string{
-		"artifactory.delivery.puppetlabs.net": "%s/xart",
-		"builds.delivery.puppetlabs.net":      "%s/xbuild",
-	}
-	for k, v := range expected_urls {
-		if val, ok := conf.UrlsToReplace[k]; ok {
-			if val != v {
-				t.Errorf("UrlsToReplace val doesn't match: Got: %s:%s", k, val)
-			}
-		} else {
-			t.Errorf("Couldn't find key %s in UrlsToReplace", k)
-		}
-	}
-	if conf.ProxyHost != "localhost" {
-		t.Errorf("proxyhost value wrong. Got: %s", conf.ProxyHost)
-	}
 	if !conf.Debug {
 		t.Errorf("Debug should have been true")
 	}

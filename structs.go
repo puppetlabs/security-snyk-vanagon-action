@@ -24,8 +24,6 @@ type config struct {
 	SkipProjects    []string
 	SkipPlatforms   []string
 	GithubWorkspace string
-	UrlsToReplace   map[string]string
-	ProxyHost       string
 	NoMonitor       bool
 	Debug           bool
 	Branch          string
