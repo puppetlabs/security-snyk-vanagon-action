@@ -94,14 +94,6 @@ func vulnExists(totalVulns []VulnReport, vuln VulnReport) bool {
 	return false
 }
 
-func authSnyk(token string) error {
-	err := exec.Command("snyk", "auth", token).Run()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // buildGemFile builds a gemfile and a gemfile.lock
 func buildGemFile(project, platform string, gems *[]gem) (string, error) {
 	// build the gemfile
@@ -188,7 +180,7 @@ func processProjPlat(deps depsOut, org string, results chan processOut) {
 	}
 }
 
-func runSnyk(p processOut, org, branch string, sem chan int, results chan []VulnReport, noMonitor bool) {
+func runMend(p processOut, org, branch string, sem chan int, results chan []VulnReport, noMonitor bool) {
 	log.Printf("running snyk on %s %s", p.project, p.platform)
 	vulns, err := snykTest(p.path, p.project, p.platform, org, branch, noMonitor)
 	//<-sem
@@ -220,7 +212,7 @@ func snykTest(path, project, platform, org, branch string, noMonitor bool) ([]Vu
 		} else {
 			snykTref = fmt.Sprintf("--target-reference=%s_%s", branch, project)
 		}
-    
+
 		log.Printf("running: snyk monitor %s %s %s %s %s", snykTref, snykRepo, snykOrg, snykProj, fileArg)
 		err := exec.Command("snyk", "monitor", snykTref, snykRepo, snykOrg, snykProj, fileArg).Run()
 		if err != nil {
@@ -256,7 +248,6 @@ func snykTest(path, project, platform, org, branch string, noMonitor bool) ([]Vu
 	//log.Println("finished snyk testing: ", fileArg)
 	return oVulns, nil
 }
-
 
 func setDebugEnvVars() {
 	testrepo := "/Users/oak.latt/dev/puppet-runtime/"
@@ -299,11 +290,6 @@ func main() {
 	}
 	// change to the working directory
 	os.Chdir(conf.GithubWorkspace)
-	// auth snyk
-	err = authSnyk(conf.SnykToken)
-	if err != nil {
-		log.Fatal("couldn't auth snyk!")
-	}
 	// get the projects and platforms
 	projects, platforms := getProjPlats(conf)
 	// get all the vanagon dependencies
