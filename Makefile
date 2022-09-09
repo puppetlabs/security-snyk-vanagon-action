@@ -1,12 +1,15 @@
 LOCAL_DIR = /Users/oak.latt/dev
 
 containerName = sec-van-action
-testFolder = $(LOCAL_DIR)/pe-bolt-vanagon/
-# testFolder = $(LOCAL_DIR)/puppet-runtime/
-# testFolder = $(LOCAL_DIR)/pe-installer-vanagon/
-# testFolder = $(LOCAL_DIR)/pxp-agent-vanagon/
+# testFolder = /Users/jeremy.mill/Documents/bolt-vanagon/
+# testFolder = /Users/jeremy.mill/Documents/puppet-runtime/
+# testFolder = /Users/jeremy.mill/Documents/pe-installer-vanagon/
+# testFolder = /Users/jeremy.mill/Documents/pxp-agent-vanagon/
+testFolder = /Users/jeremy.mill/Documents/pe-opsworks-tools-vanagon/
 
-SSHKEY := $(shell cat /Users/oak.latt/.ssh/id_ed25519 | base64)
+SSHKEY := $(shell cat /Users/jeremy.mill/.ssh/id_ed25519 | base64)
+
+
 clean:
 	-rm vanagon_action
 	-rm header_proxy/header_proxy
@@ -23,8 +26,9 @@ itest:
 	make clean
 	make build
 	make copy_testfiles
-	docker run --platform linux/amd64 -i --name $(containerName) \
-		-e INPUT_SNYKORG=snyk-code-test-n8h \
+
+	docker run -i --name $(containerName) \
+		-e INPUT_SNYKORG=sectest \
 		-e INPUT_SNYKTOKEN=$(SNYK_TOKEN) \
 		-e GITHUB_WORKSPACE=/github/workspace \
 		-e GITHUB_REPOSITORY=olatt/snyk-test \
@@ -56,6 +60,6 @@ test:
 	echo $(SSHKEY)
 
 start_cache:
-	docker rm cache_proxy
+	-docker rm cache_proxy
 	docker build -t cache_proxy -f ./dev_tools/Dockerfile .
 	docker run -it --rm --name cache_proxy -e INPUT_RPROXYUSER=artifactory -e INPUT_RPROXYKEY="$(RPROXY_KEY)" -p8080:80 cache_proxy

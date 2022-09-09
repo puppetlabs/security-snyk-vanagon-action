@@ -220,6 +220,7 @@ func snykTest(path, project, platform, org, branch string, noMonitor bool) ([]Vu
 		} else {
 			snykTref = fmt.Sprintf("--target-reference=%s_%s", branch, project)
 		}
+    
 		log.Printf("running: snyk monitor %s %s %s %s %s", snykTref, snykRepo, snykOrg, snykProj, fileArg)
 		err := exec.Command("snyk", "monitor", snykTref, snykRepo, snykOrg, snykProj, fileArg).Run()
 		if err != nil {
@@ -256,6 +257,7 @@ func snykTest(path, project, platform, org, branch string, noMonitor bool) ([]Vu
 	return oVulns, nil
 }
 
+
 func setDebugEnvVars() {
 	testrepo := "/Users/oak.latt/dev/puppet-runtime/"
 	//testrepo := "/Users/jeremy.mill/Documents/puppet-runtime/"
@@ -277,6 +279,7 @@ func setDebugEnvVars() {
 	os.Setenv("INPUT_SNYKORG", "snyk-code-test-n8h")
 	os.Setenv("INPUT_SNYKTOKEN", os.Getenv("SNYK_TOKEN"))
 	os.Setenv("GITHUB_WORKSPACE", "./testfiles/repo")
+
 	os.Setenv("INPUT_SVDEBUG", "true")
 	os.Setenv("INPUT_SKIPPROJECTS", "agent-runtime-5.5.x,agent-runtime-1.10.x,client-tools-runtime-irving,pdk-runtime")
 	os.Setenv("INPUT_SKIPPLATFORMS", "cisco-wrlinux-5-x86_64,cisco-wrlinux-7-x86_64,debian-10-armhf,eos-4-i386,fedora-30-x86_64,fedora-31-x86_64,osx-10.14-x86_64")
