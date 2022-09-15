@@ -20,27 +20,39 @@ var DIR_MUTEX = &sync.Mutex{}
 
 var MAX_V_DEPS = 20
 
+func getRequiredVar(confVal *string, varName, errorMessage string) {
+	varVal := os.Getenv(varName)
+	if varVal == "" {
+		log.Fatal(errorMessage)
+	}
+	*confVal = varVal
+}
+
+func getOptionalEnvVar(confVal *string, varName, defaultVal, errorMessage string) {
+	varVal := os.Getenv(varName)
+	if varVal == "" {
+		varVal = defaultVal
+	}
+	*confVal = varVal
+}
+
 func getEnvVar() (*config, error) {
 	conf := config{}
-	// token, org, and workspace are all required
-	token := os.Getenv("INPUT_SNYKTOKEN")
-	if token == "" {
-		return nil, errors.New("no snyk token set")
-	}
-	conf.SnykToken = token
-	org := os.Getenv("INPUT_SNYKORG")
-	if org == "" {
-		return nil, errors.New("no snyk org set")
-	}
-	conf.SnykOrg = org
+	// apikey
+	getRequiredVar(&conf.MendApiKey, "INPUT_MENDAPIKEY", "no mend API key set!")
+	// user key
+	getRequiredVar(&conf.MendUserKey, "INPUT_MENDTOKEN", "no mend User Token set!")
+	// mend URL
+	getRequiredVar(&conf.MendURL, "INPUT_MENDURL", "no mend URL set!")
+	// Get the product name and the base project name
+	getRequiredVar(&conf.ProductName, "INPUT_PRODUCTNAME", "no product name set")
+	getRequiredVar(&conf.ProjectName, "INPUT_PROJECTNAME", "no base project name set")
+	// override workspace as required
 	workspace := os.Getenv("GITHUB_WORKSPACE")
 	if workspace == "" {
 		return nil, errors.New("no github workspace set")
 	}
 	conf.GithubWorkspace = workspace
-	// get noMonitor
-	nomon := os.Getenv("INPUT_NOMONITOR")
-	conf.NoMonitor = nomon != ""
 	// skip projects and platforms are not, don't fail on it
 	// platforms
 	skipp := os.Getenv("INPUT_SKIPPLATFORMS")
@@ -182,7 +194,7 @@ func processProjPlat(deps depsOut, org string, results chan processOut) {
 
 func runMend(p processOut, org, branch string, sem chan int, results chan []VulnReport, noMonitor bool) {
 	log.Printf("running snyk on %s %s", p.project, p.platform)
-	vulns, err := snykTest(p.path, p.project, p.platform, org, branch, noMonitor)
+	vulns, err := mendTest(p.path, p.project, p.platform, org, branch, noMonitor)
 	//<-sem
 	if err != nil {
 		log.Printf("error running snyk on: %s %s", p.project, p.platform)
@@ -195,7 +207,7 @@ func runMend(p processOut, org, branch string, sem chan int, results chan []Vuln
 	log.Printf("Finished running snyk on %s %s", p.project, p.platform)
 }
 
-func snykTest(path, project, platform, org, branch string, noMonitor bool) ([]VulnReport, error) {
+func mendTest(path, project, platform, org, branch string, noMonitor bool) ([]VulnReport, error) {
 	gPath := filepath.Join(path, "Gemfile.lock")
 	cwd, _ := os.Getwd()
 	fileArg := fmt.Sprintf("--file=%s/%s", cwd, gPath)
