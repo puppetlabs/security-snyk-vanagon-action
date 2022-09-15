@@ -160,7 +160,7 @@ func buildGemFile(project, platform string, gems *[]gem) (string, error) {
 	return lOutpath, nil
 }
 
-func processProjPlat(deps depsOut, org string, results chan processOut) {
+func processProjPlat(deps depsOut, results chan processOut) {
 	// if there are gems, write a gemfile and run snyk
 	if len(*deps.Gems) > 0 {
 		path, err := buildGemFile(deps.Project, deps.Platform, deps.Gems)
@@ -286,7 +286,6 @@ func setDebugEnvVars() {
 	os.Setenv("INPUT_SVDEBUG", "true")
 	os.Setenv("INPUT_SKIPPROJECTS", "agent-runtime-5.5.x,agent-runtime-1.10.x,client-tools-runtime-irving,pdk-runtime")
 	os.Setenv("INPUT_SKIPPLATFORMS", "cisco-wrlinux-5-x86_64,cisco-wrlinux-7-x86_64,debian-10-armhf,eos-4-i386,fedora-30-x86_64,fedora-31-x86_64,osx-10.14-x86_64")
-
 }
 
 func main() {
@@ -315,7 +314,7 @@ func main() {
 	for _, dep := range vDeps {
 		log.Printf("going to process %s %s", dep.Project, dep.Platform)
 		toProcess += 1
-		go processProjPlat(dep, conf.SnykOrg, results)
+		go processProjPlat(dep, results)
 	}
 	// collect all the processOuts
 	p := []processOut{}
@@ -335,7 +334,7 @@ func main() {
 		if conf.Debug {
 			log.Printf("calling runSnyk on: %s %s", po.project, po.platform)
 		}
-		go runSnyk(po, conf.SnykOrg, conf.Branch, sem, sresults, conf.NoMonitor)
+		//go runSnyk(po, conf.SnykOrg, conf.Branch, sem, sresults, conf.NoMonitor)
 	}
 	for i := 0; i < toProcess; i++ {
 		result := <-sresults
