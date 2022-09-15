@@ -7,17 +7,23 @@ This tool will use the output of `vanagon inspect` in order to identify any gems
 
 ## Inputs
 
-### snykToken (required)
-This input is the secret snyk token
+### mendApiKey (required)
+The mend API key
 
-### snykOrg (required)
-The organization in snyk to send results to
+### mendToken (required)
+The mend user token
+
+### mendURL (required)
+The mend URL for your mend endpoint
+
+### productName (required)
+The name of the product to send results to
+
+### projectName (required)
+the name of the project. Note that the branch, project, and platform will be appended. See branch below for details
 
 ### branch
 Branch name to prepend to the snyk project name. If branch is set to `""` then the name in snyk would be in the form `<project>_<platform>`. If branch is not empty it will be in the form `<branch>_<project>_<platform>`. Branch can be automatically set using `{{ github.ref_name }}`. Branch is limited to < 10 alphanumeric characters plus dash.
-
-### noMonitor (not required)
-If you just want to run `snyk test` and not `snyk monitor` you should set this input to `true`
 
 ### skipProjects
 A comma separated list of projects to skip
