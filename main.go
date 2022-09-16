@@ -305,7 +305,6 @@ func main() {
 	// foreach processOut run snyk
 	sem := make(chan int, MAX_V_DEPS)
 	sresults := make(chan RunStatus)
-	totalVulns := []VulnReport{}
 	toProcess = 0
 	DIR_MUTEX.Lock()
 	for _, po := range p {
@@ -316,26 +315,20 @@ func main() {
 		}
 		go runMend(po, conf, sem, sresults)
 	}
+	hasFailures := false
 	for i := 0; i < toProcess; i++ {
 		result := <-sresults
-		for _, v := range result {
-			if !vulnExists(totalVulns, v) {
-				totalVulns = append(totalVulns, v)
-			}
+		if result.Failure {
+			hasFailures = true
+			log.Printf("Got a failure on %s-%s. See mend console for details", result.Project, result.Platform)
+		}
+		if !result.Failure && conf.Debug {
+			log.Printf("Success on %s-%s", result.Project, result.Platform)
 		}
 	}
-
-	if len(totalVulns) > 0 {
-		// print the output and exit with status 1
-		outString := totalVulns[0].String()
-		for _, v := range totalVulns[1:] {
-			outString += fmt.Sprintf("%s,", v.String())
-		}
-		outString = strings.TrimSuffix(outString, ",")
-		fmt.Printf("::set-output name=vulns::%s\n", outString)
-		os.Exit(0)
+	if hasFailures {
+		os.Exit(1)
 	} else {
-		fmt.Print("::set-output name=vulns:: ")
 		os.Exit(0)
 	}
 }
