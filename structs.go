@@ -31,6 +31,12 @@ type config struct {
 	Branch          string
 }
 
+type RunStatus struct {
+	Project  string
+	Platform string
+	Failure  bool
+}
+
 type VulnReport struct {
 	PackageName string
 	Version     string

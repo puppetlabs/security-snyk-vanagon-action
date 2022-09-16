@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"log"
@@ -11,8 +10,6 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-
-	"github.com/tidwall/gjson"
 )
 
 var LOCKFILE_DIR string = "gen_lockfile"
@@ -192,73 +189,56 @@ func processProjPlat(deps depsOut, results chan processOut) {
 	}
 }
 
-func runMend(p processOut, org, branch string, sem chan int, results chan []VulnReport, noMonitor bool) {
-	log.Printf("running snyk on %s %s", p.project, p.platform)
-	vulns, err := mendTest(p.path, p.project, p.platform, org, branch, noMonitor)
-	//<-sem
-	if err != nil {
-		log.Printf("error running snyk on: %s %s", p.project, p.platform)
-		<-sem
-		results <- []VulnReport{}
-		return
+func runMend(p processOut, conf *config, sem chan int, results chan RunStatus) {
+	log.Printf("running mend on %s %s", p.project, p.platform)
+	code, _errStr := mendTest(p, conf, false)
+	if conf.Debug {
+		log.Printf("DEBUG: err on %s-%s (%d): %s", p.project, p.platform, code, _errStr)
 	}
+	rt := RunStatus{Project: p.project, Platform: p.platform, Failure: (code != 0)}
 	<-sem
-	results <- vulns
+	results <- rt
 	log.Printf("Finished running snyk on %s %s", p.project, p.platform)
 }
 
-func mendTest(path, project, platform, org, branch string, noMonitor bool) ([]VulnReport, error) {
-	gPath := filepath.Join(path, "Gemfile.lock")
+func mendTest(p processOut, conf *config, failOnFail bool) (int, string) {
+	// build the path to scan with mend
+	gPath := filepath.Join(p.path, "Gemfile.lock")
 	cwd, _ := os.Getwd()
-	fileArg := fmt.Sprintf("--file=%s/%s", cwd, gPath)
-	log.Println("testing ", project, platform)
-	getRepo := os.Getenv("GITHUB_REPOSITORY")
-	snykRepo := fmt.Sprintf("--remote-repo-url=https://github.com/%s.git", getRepo)
-	// run snyk monitor
-	if !noMonitor {
-		snykOrg := fmt.Sprintf("--org=%s", org)
-		snykProj := fmt.Sprintf("--project-name=%s", platform)
-		var snykTref string
-		if branch == "" {
-			snykTref = fmt.Sprintf("--target-reference=%s", project)
-		} else {
-			snykTref = fmt.Sprintf("--target-reference=%s_%s", branch, project)
-		}
-
-		log.Printf("running: snyk monitor %s %s %s %s %s", snykTref, snykRepo, snykOrg, snykProj, fileArg)
-		err := exec.Command("snyk", "monitor", snykTref, snykRepo, snykOrg, snykProj, fileArg).Run()
-		if err != nil {
-			log.Println("error running snyk monitor!", err)
-			return nil, err
-		}
+	testPath := fmt.Sprintf("%s/%s", cwd, gPath)
+	// build a subprocess with env vars
+	cmd := exec.Command("java", "-jar", "wss-unified-agent.jar")
+	cmd.Env = append(cmd.Environ(), fmt.Sprintf("WS_APIKEY=%s", conf.MendApiKey))
+	cmd.Env = append(cmd.Environ(), fmt.Sprintf("WS_WSS_URL=%s", conf.MendURL))
+	cmd.Env = append(cmd.Environ(), fmt.Sprintf("WS_USERKEY=%s", conf.MendUserKey))
+	cmd.Env = append(cmd.Environ(), fmt.Sprintf("WS_PRODUCTNAME=%s", conf.ProductName))
+	if failOnFail {
+		cmd.Env = append(cmd.Environ(), "​WS_FORCEUPDATE=true")
+		cmd.Env = append(cmd.Environ(), "​WS_FORCEUPDATE_FAILBUILDONPOLICYVIOLATION=true")
 	}
-	// run snyk test (note, this will throw a non-zero exit code on vulns being found)
-	stest := exec.Command("snyk", "test", "--severity-threshold=medium", "--json", fileArg)
-	var out bytes.Buffer
-	var stderr bytes.Buffer
-	stest.Stdout = &out
-	stest.Stderr = &stderr
-	err := stest.Run()
+	// setup the file to be scanned
+	cmd.Env = append(cmd.Environ(), fmt.Sprintf("WS_INCLUDES=%s", testPath))
+	//setup projectname
+	projectName := ""
+	if conf.Branch != "" {
+		projectName = fmt.Sprintf("%s-%s-%s-%s", conf.ProjectName, conf.Branch, p.project, p.platform)
+	} else {
+		projectName = fmt.Sprintf("%s-%s-%s", conf.ProjectName, p.project, p.platform)
+	}
+	cmd.Env = append(cmd.Environ(), fmt.Sprintf("WS_PROJECTNAME=%s", projectName))
+	// run the command and catch the return code
+	err := cmd.Run()
 	if err != nil {
-		// fail if it's anything but status 1 or 2
-		if err.Error() != "exit status 1" {
-			log.Println("error running snyk test.", err, out.String(), stderr.String())
-			return nil, err
+		switch e := err.(type) {
+		case *exec.ExitError:
+			code := e.ExitCode()
+			es := string(e.Stderr)
+			return code, es
+		default:
+			return -1, err.Error()
 		}
 	}
-	log.Println("finished snyk testing: ", project, platform)
-	sout := out.String()
-	// get the vulns
-	// fmt.Println(sout)
-	vulns := gjson.Get(sout, "vulnerabilities").Array()
-	oVulns := []VulnReport{}
-	for _, vuln := range vulns {
-		v := NewVulnReport(vuln)
-		oVulns = append(oVulns, v)
-	}
-	// TODO: get the license issues
-	//log.Println("finished snyk testing: ", fileArg)
-	return oVulns, nil
+	return 0, ""
 }
 
 func setDebugEnvVars() {
@@ -324,7 +304,7 @@ func main() {
 	}
 	// foreach processOut run snyk
 	sem := make(chan int, MAX_V_DEPS)
-	sresults := make(chan []VulnReport)
+	sresults := make(chan RunStatus)
 	totalVulns := []VulnReport{}
 	toProcess = 0
 	DIR_MUTEX.Lock()
@@ -332,9 +312,9 @@ func main() {
 		toProcess = toProcess + 1
 		sem <- 1
 		if conf.Debug {
-			log.Printf("calling runSnyk on: %s %s", po.project, po.platform)
+			log.Printf("calling runMend on: %s %s", po.project, po.platform)
 		}
-		//go runSnyk(po, conf.SnykOrg, conf.Branch, sem, sresults, conf.NoMonitor)
+		go runMend(po, conf, sem, sresults)
 	}
 	for i := 0; i < toProcess; i++ {
 		result := <-sresults
