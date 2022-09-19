@@ -193,7 +193,7 @@ func runMend(p processOut, conf *config, sem chan int, results chan RunStatus) {
 	log.Printf("running mend on %s %s", p.project, p.platform)
 	code, _errStr := mendTest(p, conf, false)
 	if conf.Debug {
-		log.Printf("DEBUG: err on %s-%s (%d): %s", p.project, p.platform, code, _errStr)
+		log.Printf("DEBUG: finished mendTest on %s-%s (%d): %s", p.project, p.platform, code, _errStr)
 	}
 	rt := RunStatus{Project: p.project, Platform: p.platform, Failure: (code != 0)}
 	<-sem
