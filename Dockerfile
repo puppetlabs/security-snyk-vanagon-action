@@ -11,8 +11,8 @@ RUN echo "deb https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION
 RUN apt update
 RUN apt install temurin-17-jdk -y
 # move over the executables
-# ADD https://github.com/puppetlabs/security-snyk-vanagon-action/releases/latest/download/vanagon_action /usr/local/bin/vanagon_action
-ADD vanagon_action /usr/local/bin/vanagon_action
+ADD https://github.com/puppetlabs/security-mend-vanagon-action/releases/latest/download/vanagon_action /usr/local/bin/vanagon_action
+# ADD vanagon_action /usr/local/bin/vanagon_action
 RUN chmod +x /usr/local/bin/vanagon_action
 # download mend unified agent
 RUN wget -O /root/wss-unified-agent.jar https://unified-agent.s3.amazonaws.com/wss-unified-agent.jar
