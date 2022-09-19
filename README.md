@@ -38,8 +38,7 @@ A SSH key to install on the docker container in `/root/.ssh/<sshKeyName>`. It **
 The name of the SSH key
 
 ## Outputs
-### vulns
-An array of vulnerable packages
+This action does not output the vulns in the package like the snyk one did. Results are in the mend console.
 
 ## Example usage
 please see `sample_workflow.yaml` for a sample

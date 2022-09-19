@@ -207,7 +207,7 @@ func mendTest(p processOut, conf *config, failOnFail bool) (int, string) {
 	cwd, _ := os.Getwd()
 	testPath := fmt.Sprintf("%s/%s", cwd, gPath)
 	// build a subprocess with env vars
-	cmd := exec.Command("java", "-jar", "wss-unified-agent.jar")
+	cmd := exec.Command("java", "-jar", "/root/wss-unified-agent.jar")
 	cmd.Env = append(cmd.Environ(), fmt.Sprintf("WS_APIKEY=%s", conf.MendApiKey))
 	cmd.Env = append(cmd.Environ(), fmt.Sprintf("WS_WSS_URL=%s", conf.MendURL))
 	cmd.Env = append(cmd.Environ(), fmt.Sprintf("WS_USERKEY=%s", conf.MendUserKey))
