@@ -19,22 +19,16 @@ type depsOut struct {
 }
 
 type config struct {
-	MendApiKey      string
-	MendUserKey     string
-	MendURL         string
-	ProductName     string
-	ProjectName     string
+	SnykToken       string
+	SnykOrg         string
 	SkipProjects    []string
 	SkipPlatforms   []string
 	GithubWorkspace string
+	UrlsToReplace   map[string]string
+	ProxyHost       string
+	NoMonitor       bool
 	Debug           bool
 	Branch          string
-}
-
-type RunStatus struct {
-	Project  string
-	Platform string
-	Failure  bool
 }
 
 type VulnReport struct {

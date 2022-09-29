@@ -2,5 +2,3 @@ testfiles/repo
 local_nginx/cache
 local_nginx/nginx_secure.conf
 vanagon_action
-.dccache
-.DS_Store

@@ -1,6 +1,8 @@
 name: run_tests
 on:
-  pull_request:
+  push:
+    branches:
+      - main
 jobs:
   test:
     runs-on: ubuntu-latest
