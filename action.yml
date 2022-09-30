@@ -19,18 +19,6 @@ inputs:
   skipPlatforms:
     description: 'A comma separated list of platforms to skip'
     required: false
-  urlsToReplace:
-    description: 'URLs to replace in a key value format <domain>,<format>. Example: foo.example.com,%s/foo,bar.example.com,%/a/bar'
-    required: false
-  newHost:
-    description: 'domain to replace urlsToReplace with. Usually a reverse proxy'
-    required: false
-  rproxyKey:
-    description: 'a basic auth password to use for a reverse proxy'
-    required: false
-  rproxyUser:
-    description: 'a basic auth username to use for a reverse proxy'
-    required: false
   sshKey:
     description: 'a base64 encoded SSH key to install on the container'
     required: false

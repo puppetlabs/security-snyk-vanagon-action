@@ -64,29 +64,11 @@ func getEnvVar() (*config, error) {
 	} else {
 		conf.SkipProjects = []string{}
 	}
-	// get the urls to replace if any
-	urls := os.Getenv("INPUT_URLSTOREPLACE")
-	if urls != "" {
-		urlInput := strings.Split(urls, ",")
-		for i := range urlInput {
-			urlInput[i] = strings.TrimSpace(urlInput[i])
-		}
-		conf.UrlsToReplace = make(map[string]string)
-		for i := 0; i < len(urlInput); i += 2 {
-			conf.UrlsToReplace[urlInput[i]] = urlInput[i+1]
-		}
-	}
-	// get the proxy host
-	newhost := os.Getenv("INPUT_NEWHOST")
-	if newhost != "" {
-		conf.ProxyHost = newhost
-	} else {
-		conf.ProxyHost = ""
-	}
+
 	// add a debug flag
 	debug := os.Getenv("INPUT_SVDEBUG")
 	conf.Debug = debug != ""
-	// get the branch
+
 	branch := os.Getenv("INPUT_BRANCH")
 	if branch != "" {
 		if len(branch) > 10 {
@@ -226,17 +208,21 @@ func snykTest(path, project, platform, org, branch string, noMonitor bool) ([]Vu
 	cwd, _ := os.Getwd()
 	fileArg := fmt.Sprintf("--file=%s/%s", cwd, gPath)
 	log.Println("testing ", project, platform)
+	getRepo := os.Getenv("GITHUB_REPOSITORY")
+	snykRepo := fmt.Sprintf("--remote-repo-url=https://github.com/%s.git", getRepo)
 	// run snyk monitor
 	if !noMonitor {
 		snykOrg := fmt.Sprintf("--org=%s", org)
-		var snykProj string
+		snykProj := fmt.Sprintf("--project-name=%s", platform)
+		var snykTref string
 		if branch == "" {
-			snykProj = fmt.Sprintf("--project-name=%s_%s", project, platform)
+			snykTref = fmt.Sprintf("--target-reference=%s", project)
 		} else {
-			snykProj = fmt.Sprintf("--project-name=%s_%s_%s", branch, project, platform)
+			snykTref = fmt.Sprintf("--target-reference=%s_%s", branch, project)
 		}
-		log.Printf("running: snyk monitor %s %s %s", snykOrg, snykProj, fileArg)
-		err := exec.Command("snyk", "monitor", snykOrg, snykProj, fileArg).Run()
+
+		log.Printf("running: snyk monitor %s %s %s %s %s", snykTref, snykRepo, snykOrg, snykProj, fileArg)
+		err := exec.Command("snyk", "monitor", snykTref, snykRepo, snykOrg, snykProj, fileArg).Run()
 		if err != nil {
 			log.Println("error running snyk monitor!", err)
 			return nil, err
@@ -271,53 +257,8 @@ func snykTest(path, project, platform, org, branch string, noMonitor bool) ([]Vu
 	return oVulns, nil
 }
 
-func replaceUrls(path, newHost string, umap map[string]string) error {
-	for url, nfmt := range umap {
-		err := filepath.Walk(path, func(spath string, info os.FileInfo, err error) error {
-			if info == nil {
-				log.Fatal("Fatal: os.FileInfo is nil!")
-			}
-			// if it's a file
-			if !info.IsDir() {
-				// read the file to a string
-				dat, err := os.ReadFile(spath)
-				if err != nil {
-					log.Printf("Error reading %s", spath)
-					return nil
-				}
-				fstring := string(dat)
-				// find and replace each URL (http and https replacement)
-				hstring := fmt.Sprintf("http://%s", url)
-				sstring := fmt.Sprintf("https://%s", url)
-				// format the new host, then format according to the specifier
-				newUrl := ""
-				if newHost == "localhost" || newHost == "localhost:8080" {
-					newUrl = fmt.Sprintf("http://%s", newHost)
-				} else {
-					newUrl = fmt.Sprintf("https://%s", newHost)
-				}
-				newUrl = fmt.Sprintf(nfmt, newUrl)
-				fstring = strings.Replace(fstring, hstring, newUrl, 1)
-				fstring = strings.Replace(fstring, sstring, newUrl, 1)
-				fstring = strings.Replace(fstring, "git://", "https://", -1)
-				// rewrite the file
-				err = os.WriteFile(spath, []byte(fstring), 0644)
-				if err != nil {
-					log.Printf("Error writing replacement %s", spath)
-					return nil
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func setDebugEnvVars() {
-	testrepo := "/Users/jeremy.mill/Documents/pxp-agent-vanagon/"
+	testrepo := "/Users/oak.latt/dev/puppet-runtime/"
 	//testrepo := "/Users/jeremy.mill/Documents/puppet-runtime/"
 	out, err := exec.Command("rm", "-rf", "./testfiles/repo").Output()
 	if err != nil {
@@ -334,13 +275,9 @@ func setDebugEnvVars() {
 	}
 	_ = out
 	// MAX_V_DEPS = 1
-	os.Setenv("INPUT_SNYKORG", "sectest")
+	os.Setenv("INPUT_SNYKORG", "snyk-code-test-n8h")
 	os.Setenv("INPUT_SNYKTOKEN", os.Getenv("SNYK_TOKEN"))
 	os.Setenv("GITHUB_WORKSPACE", "./testfiles/repo")
-	os.Setenv("INPUT_RPROXYKEY", os.Getenv("RPROXY_KEY"))
-	os.Setenv("INPUT_URLSTOREPLACE", "artifactory.delivery.puppetlabs.net,%s/xart,builds.delivery.puppetlabs.net,%s/xbuild")
-	os.Setenv("INPUT_NEWHOST", "localhost:8080")
-	//os.Setenv("INPUT_RPROXYKEY", "test")
 	os.Setenv("INPUT_SVDEBUG", "true")
 	os.Setenv("INPUT_SKIPPROJECTS", "agent-runtime-5.5.x,agent-runtime-1.10.x,client-tools-runtime-irving,pdk-runtime")
 	os.Setenv("INPUT_SKIPPLATFORMS", "cisco-wrlinux-5-x86_64,cisco-wrlinux-7-x86_64,debian-10-armhf,eos-4-i386,fedora-30-x86_64,fedora-31-x86_64,osx-10.14-x86_64")
@@ -367,14 +304,6 @@ func main() {
 	}
 	// get the projects and platforms
 	projects, platforms := getProjPlats(conf)
-	// replace the urls
-	log.Println("replacing URLs")
-	if len(conf.UrlsToReplace) > 0 {
-		err = replaceUrls("./configs", conf.ProxyHost, conf.UrlsToReplace)
-		if err != nil {
-			log.Panic("error replacing URLs", err)
-		}
-	}
 	// get all the vanagon dependencies
 	log.Println("running vanagon deps")
 	vDeps := runVanagonDeps(projects, platforms, conf.Debug)
