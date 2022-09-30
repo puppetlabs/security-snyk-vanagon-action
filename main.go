@@ -220,6 +220,7 @@ func snykTest(path, project, platform, org, branch string, noMonitor bool) ([]Vu
 		} else {
 			snykTref = fmt.Sprintf("--target-reference=%s_%s", branch, project)
 		}
+
 		log.Printf("running: snyk monitor %s %s %s %s %s", snykTref, snykRepo, snykOrg, snykProj, fileArg)
 		err := exec.Command("snyk", "monitor", snykTref, snykRepo, snykOrg, snykProj, fileArg).Run()
 		if err != nil {
